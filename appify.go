@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/StevenZack/tools/fileToolkit"
+	"github.com/StevenZack/tools/strToolkit"
 	"io"
 	"os"
 	"os/exec"
@@ -10,33 +12,46 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("lack of input file")
+		fmt.Println("usage : \n")
+		fmt.Println("1.  $./appify executable ")
+		fmt.Println("		this will collect all dylib deps of executable into current folder")
+		fmt.Println("2.  $./appify -dylibs")
+		fmt.Println("		this will collect all dylib deps of all the .dylib files in current folder")
 		return
 	}
+	curr, _ := os.Getwd()
+	if os.Args[1] == "-dylibs" {
+		fmt.Println("do on all dylibs")
+		for _, f := range fileToolkit.GetAllFilesFromFolder(curr) {
+			if strToolkit.EndsWith(f, ".dylib") {
+				fixDylib(f)
+			}
+		}
+		return
+	}
+	fmt.Println("do on ", os.Args[1])
 	fixDylib(os.Args[1])
 }
 func fixDylib(fname string) {
 	curr, _ := os.Getwd()
-	fmt.Println("curr == ", curr)
 	out, e := exec.Command("otool", "-L", fname).Output()
 	if e != nil {
 		fmt.Println(e)
 		return
 	}
 	libs := strings.Split(string(out), "\n")
-	fmt.Println(len(libs), "libs of ", fname)
 	for _, str := range libs {
 		lib := cutStr(str)
 		if !strings.Contains(lib, "local") {
 			continue
 		}
-		fmt.Println(lib)
 		if !fileExists(getFileName(lib)) {
 			e = copyFile(lib, curr+"/"+getFileName(lib))
 			if e != nil {
 				fmt.Println("while cp", lib, e)
 				return
 			}
+			fmt.Println(lib)
 		}
 		e = exec.Command("install_name_tool", "-change", lib, `@executable_path/`+getFileName(lib), fname).Run()
 		if e != nil {
