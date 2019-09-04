@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/StevenZack/tools/fileToolkit"
-	"github.com/StevenZack/tools/strToolkit"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/StevenZack/frontpage/logx"
+	"github.com/StevenZack/tools/fileToolkit"
 )
 
 func main() {
@@ -22,8 +23,14 @@ func main() {
 	curr, _ := os.Getwd()
 	if os.Args[1] == "-dylibs" {
 		fmt.Println("do on all dylibs")
-		for _, f := range fileToolkit.GetAllFilesFromFolder(curr) {
-			if strToolkit.EndsWith(f, ".dylib") {
+		fs, e := fileToolkit.GetAllFilesFromFolder(curr)
+		if e != nil {
+			logx.Error(e)
+			return
+		}
+
+		for _, f := range fs {
+			if strings.HasSuffix(f, ".dylib") {
 				fixDylib(f)
 			}
 		}
